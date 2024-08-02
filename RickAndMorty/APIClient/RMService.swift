@@ -25,33 +25,53 @@ final class RMService {
     ///   - request: Request instance
     ///   - type: The type of object we ecpect to get back
     ///   - completion: callback with data or error
+// new way with async await
     public func execute<T: Codable>(
         _ request: RMRequest,
-        expection type: T.Type,
-        completion: @escaping (Result<T, Error>) -> Void
-    ) {
+        expecting type: T.Type
+    ) async throws -> T {
         guard let urlRequest = self.request(from: request) else {
-            completion(.failure(RMServiceError.failedToCreateRequest))
-            return
+            throw RMServiceError.failedToCreateRequest
         }
         
-        let task = URLSession.shared.dataTask(with: urlRequest) { data, _, error in
-            guard let data = data, error == nil else {
-                completion(.failure(error ?? RMServiceError.failedToGetData))
-                return
-            }
-            
-            // Decode response
-            do {
-                let result = try JSONDecoder().decode(type.self, from: data)
-                
-                completion(.success(result))
-            } catch {
-                completion(.failure(error))
-            }
+        let (data, _) = try await URLSession.shared.data(for: urlRequest)
+        
+        do {
+            let result = try JSONDecoder().decode(type.self, from: data)
+            return result
+        } catch {
+            throw error
         }
-        task.resume()
     }
+    
+    // old way withouse using async await
+//    public func execute<T: Codable>(
+//        _ request: RMRequest,
+//        expection type: T.Type,
+//        completion: @escaping (Result<T, Error>) -> Void
+//    ) {
+//        guard let urlRequest = self.request(from: request) else {
+//            completion(.failure(RMServiceError.failedToCreateRequest))
+//            return
+//        }
+//        
+//        let task = URLSession.shared.dataTask(with: urlRequest) { data, _, error in
+//            guard let data = data, error == nil else {
+//                completion(.failure(error ?? RMServiceError.failedToGetData))
+//                return
+//            }
+//            
+//            // Decode response
+//            do {
+//                let result = try JSONDecoder().decode(type.self, from: data)
+//                
+//                completion(.success(result))
+//            } catch {
+//                completion(.failure(error))
+//            }
+//        }
+//        task.resume()
+//    }
     
     // MARK: - Private
     
